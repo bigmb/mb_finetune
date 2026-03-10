@@ -1,5 +1,10 @@
-tiktoken
 torch
-mb_utils
-mb_base
-transformers
+transformers>=4.40.0
+peft>=0.10.0
+bitsandbytes
+accelerate
+datasets
+Pillow
+pyyaml
+numpy
+pandas
