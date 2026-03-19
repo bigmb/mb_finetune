@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from mb.utils.yaml_reader import read_yaml
 
 __all__ = [
     "ModelConfig",
@@ -102,7 +103,8 @@ class TrainConfig:
 
 @dataclass
 class OutputConfig:
-    """Output / checkpoint configuration."""
+    """
+    Output / checkpoint configuration."""
 
     output_dir: str = "./output"
     save_total_limit: int = 3
@@ -122,38 +124,24 @@ class FinetuneConfig:
     train: TrainConfig = field(default_factory=TrainConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
 
-    # ------------------------------------------------------------------
-    # Factory helpers
-    # ------------------------------------------------------------------
-
-    @classmethod
-    def from_yaml(cls, path: PathLike, encoding: str = "utf-8") -> "FinetuneConfig":
-        """Load a ``FinetuneConfig`` from a YAML file."""
-        import yaml  # type: ignore
-
-        raw = Path(path).read_text(encoding=encoding)
-        data: Dict[str, Any] = yaml.safe_load(raw) or {}
-
-        return cls.from_dict(data)
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "FinetuneConfig":
-        """Construct from a plain dictionary (e.g. parsed YAML / JSON)."""
-
-        lora_data = data.get("model", {}).pop("lora", None)
-        lora_cfg = LoRAConfig(**lora_data) if isinstance(lora_data, dict) else LoRAConfig()
-
-        model_cfg = ModelConfig(**data.get("model", {}))
-        model_cfg.lora = lora_cfg
-
-        return cls(
-            model=model_cfg,
-            data=DataConfig(**data.get("data", {})),
-            train=TrainConfig(**data.get("train", {})),
-            output=OutputConfig(**data.get("output", {})),
-        )
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Serialise back to a plain dict."""
-        from dataclasses import asdict
-        return asdict(self)
+    def read_config(self, path: PathLike) -> FinetuneConfig:
+        """
+        Load configuration from a YAML file.
+        """
+        data = read_yaml(path)
+        self._update_from_dict(data)
+        
+    
+    def _update_from_dict(self, data: Dict[str, Any]):
+        """
+        Recursively update dataclass fields from a nested dictionary.
+        """
+        for key, value in data.items():
+            if hasattr(self, key):                      # check own dataclasses fields
+                attr = getattr(self, key)
+                if isinstance(attr, (ModelConfig, DataConfig, TrainConfig, OutputConfig)):
+                    for sub_key, sub_value in value.items():
+                        if hasattr(attr, sub_key):
+                            setattr(attr, sub_key, sub_value)
+                else:
+                    setattr(self, key, value)
