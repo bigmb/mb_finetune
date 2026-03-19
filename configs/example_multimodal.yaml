@@ -6,7 +6,7 @@ model:
   task_type: image_text_to_text
   load_in_4bit: true
   use_flash_attention: true
-  torch_dtype: bfloat16
+  torch_dtype: float16
   device_map: auto
   trust_remote_code: true
   lora:

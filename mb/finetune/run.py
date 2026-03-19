@@ -5,13 +5,9 @@ Usage:
 """
 
 import argparse
-import logging
-
 from mb.finetune.config import FinetuneConfig
 from mb.finetune.trainer import FinetuneTrainer
-
-logger = logging.getLogger("mb.finetune")
-
+from mb.utils.logging import logg
 
 def main():
     parser = argparse.ArgumentParser(
@@ -38,11 +34,16 @@ def main():
         # For eval-only, we still need to go through load sequence
         trainer.train()  # will resume from checkpoint
         metrics = trainer.evaluate()
-        logger.info(f"Evaluation metrics: {metrics}")
+        if trainer.logger is not None:
+            from mb.utils.logging import logger
+            logger = logger
+        else:
+            logger = None
+        logg.info(f"Evaluation metrics: {metrics}", logger=logger)
     else:
         trainer.train()
         trainer.save()
-        logger.info("Done!")
+        logg.info("Done.", logger=logger)
 
 
 if __name__ == "__main__":

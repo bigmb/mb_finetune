@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import logging
 import random
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
-
 import torch
 import numpy as np
+from mb.utils.logging import logg
 
-logger = logging.getLogger("mb.finetune")
 
 __all__ = [
     "set_seed",
@@ -45,13 +43,13 @@ def count_parameters(model: torch.nn.Module) -> Dict[str, int]:
     return {"total": total, "trainable": trainable, "frozen": total - trainable}
 
 
-def print_gpu_memory() -> None:
+def print_gpu_memory(logger=None) -> None:
     """Log current GPU memory usage."""
     if not torch.cuda.is_available():
-        logger.info("No GPU available.")
+        logg.info("No GPU available.",logger=logger)
         return
     for i in range(torch.cuda.device_count()):
         allocated = torch.cuda.memory_allocated(i) / 1024 ** 3
         reserved = torch.cuda.memory_reserved(i) / 1024 ** 3
-        logger.info(f"GPU {i}: {allocated:.2f} GB allocated, {reserved:.2f} GB reserved")
+        logg.info(f"GPU {i}: {allocated:.2f} GB allocated, {reserved:.2f} GB reserved", logger=logger)
 

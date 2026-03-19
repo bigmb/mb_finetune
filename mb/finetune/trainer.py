@@ -14,12 +14,9 @@ Usage:
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Optional
-
 from transformers import Trainer, TrainingArguments
-
 from mb.finetune.config import FinetuneConfig
 from mb.finetune.data.collator import SmartCollator
 from mb.finetune.data.multimodal_dataset import MultimodalDataset
@@ -28,11 +25,9 @@ from mb.finetune.models.registry import ModelRegistry
 from mb.finetune.models.base import BaseModelAdapter
 from mb.finetune.callbacks.logging import LoggingCallback
 from mb.finetune.callbacks.checkpoint import CheckpointCallback
+from mb.utils.logging import logg
 
 __all__ = ["FinetuneTrainer"]
-
-logger = logging.getLogger("mb.finetune")
-
 
 class FinetuneTrainer:
     """High-level finetuning orchestrator.
@@ -43,25 +38,23 @@ class FinetuneTrainer:
         Full configuration (model, data, training, output).
     """
 
-    def __init__(self, config: FinetuneConfig) -> None:
+    def __init__(self, config: FinetuneConfig, logger=None) -> None:
         self.config = config
         self.adapter: Optional[BaseModelAdapter] = None
         self.hf_trainer: Optional[Trainer] = None
-        self._setup_logging()
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+        self.logger = logger 
 
     def train(self) -> None:
-        """Run the full finetuning pipeline: load → prepare → train."""
-        logger.info("Initialising finetuning pipeline …")
+        """
+        Run the full finetuning pipeline: load → prepare → train.
+        """
+        logg.info("Initialising finetuning pipeline",logger=self.logger)
 
         # 1. Load model adapter
         self.adapter = self._load_adapter()
 
         # 2. Load model + tokenizer
-        logger.info(f"Loading model '{self.config.model.model_name}' …")
+        logg.info(f"Loading model '{self.config.model.model_name}'", logger=self.logger)
         model, tokenizer = self.adapter.load_model()
         model = self.adapter.prepare_for_training()
 
@@ -87,41 +80,45 @@ class FinetuneTrainer:
         )
 
         # 7. Train!
-        logger.info("Starting training …")
+        logg.info("Starting training", logger=self.logger)
         resume = self.config.output.resume_from_checkpoint
         self.hf_trainer.train(resume_from_checkpoint=resume)
 
-        logger.info("Training complete.")
+        logg.info("Training complete.", logger=self.logger)
 
     def save(self, output_dir: Optional[str] = None) -> None:
-        """Save the finetuned model + tokenizer to disk."""
+        """
+        Save the finetuned model + tokenizer to disk.
+        """
         save_dir = output_dir or self.config.output.output_dir
         Path(save_dir).mkdir(parents=True, exist_ok=True)
 
         if self.adapter is not None:
             self.adapter.save_model(save_dir)
-            logger.info(f"Model saved to {save_dir}")
+            logg.info(f"Model saved to {save_dir}", logger=self.logger)
         elif self.hf_trainer is not None:
             self.hf_trainer.save_model(save_dir)
-            logger.info(f"Model saved to {save_dir}")
+            logg.info(f"Model saved to {save_dir}", logger=self.logger)
 
     def evaluate(self):
-        """Run evaluation and return metrics."""
+        """
+        Run evaluation and return metrics.
+        """
         if self.hf_trainer is None:
             raise RuntimeError("Trainer not initialised – call train() first.")
         return self.hf_trainer.evaluate()
 
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-
     def _load_adapter(self) -> BaseModelAdapter:
-        """Instantiate the correct model adapter from the registry."""
+        """
+        Instantiate the correct model adapter from the registry.
+        """
         adapter_cls = ModelRegistry.get(self.config.model.model_name)
         return adapter_cls(self.config)
 
     def _build_dataset(self, split: str):
-        """Build a train or eval dataset based on config."""
+        """
+        Build a train or eval dataset based on config.
+        """
         data_cfg = self.config.data
         data_path = data_cfg.train_path if split == "train" else data_cfg.val_path
 
@@ -151,7 +148,9 @@ class FinetuneTrainer:
             )
 
     def _build_training_args(self) -> TrainingArguments:
-        """Map ``TrainConfig`` + ``OutputConfig`` → HuggingFace ``TrainingArguments``."""
+        """
+        Map ``TrainConfig`` + ``OutputConfig`` → HuggingFace ``TrainingArguments``.
+        """
         t = self.config.train
         o = self.config.output
 
@@ -183,11 +182,4 @@ class FinetuneTrainer:
             optim=t.optim,
             deepspeed=t.deepspeed,
             remove_unused_columns=False,  # important for multimodal
-        )
-
-    def _setup_logging(self) -> None:
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
         )
