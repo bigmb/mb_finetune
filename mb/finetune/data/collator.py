@@ -7,14 +7,14 @@ appropriately for different model architectures.
 from __future__ import annotations
 
 from typing import Any, Dict, List
-
 import torch
 
 __all__ = ["SmartCollator"]
 
 
 class SmartCollator:
-    """Collator that stacks tensors and pads where necessary.
+    """
+    Collator that stacks tensors and pads where necessary.
 
     Works transparently with both text-only and multimodal batches.
     """
