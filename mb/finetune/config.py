@@ -124,13 +124,15 @@ class FinetuneConfig:
     train: TrainConfig = field(default_factory=TrainConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
 
-    def read_config(self, path: PathLike) -> FinetuneConfig:
+    @classmethod
+    def from_yaml(cls, path: PathLike) -> FinetuneConfig:
         """
         Load configuration from a YAML file.
         """
         data = read_yaml(path)
-        self._update_from_dict(data)
-        
+        config = cls()
+        config._update_from_dict(data)
+        return config
     
     def _update_from_dict(self, data: Dict[str, Any]):
         """
