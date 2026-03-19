@@ -6,9 +6,9 @@ the sample to the model adapter's 'format_input()'.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Dict, Union
 from mb.finetune.data.base import BaseDataset
+from pathlib import Path
 
 __all__ = ["MultimodalDataset"]
 
@@ -18,15 +18,15 @@ class MultimodalDataset(BaseDataset):
 
     def __init__(
         self,
-        data_path: Union[str, Path],
-        image_dir: Union[str, Path] = "",
+        data_path: str,
+        image_dir: str = "",
         image_column: str = "image",
         text_column: str = "text",
         target_column: str = "output",
         image_size: int = 224,
         split: str = "train",
     ) -> None:
-        self.image_dir = Path(image_dir) if image_dir else None
+        self.image_dir = image_dir
         self.image_column = image_column
         self.text_column = text_column
         self.target_column = target_column
@@ -44,7 +44,7 @@ class MultimodalDataset(BaseDataset):
         if isinstance(img, str):
             img_path = Path(img)
             if not img_path.is_absolute() and self.image_dir:
-                img_path = self.image_dir / img
+                img_path = Path(self.image_dir) / img
             sample = {**sample, self.image_column: str(img_path)}
 
         return sample

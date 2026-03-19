@@ -5,7 +5,6 @@ Handles loading data from JSON, CSV, Parquet, and JSONL files.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Dict, List,  Union
 from mb.pandas.dfload import load_any_df
 from torch.utils.data import Dataset
@@ -21,10 +20,10 @@ class BaseDataset(Dataset):
 
     def __init__(
         self,
-        data_path: Union[str, Path],
+        data_path: str,
         split: str = "train",
     ) -> None:
-        self.data_path = Path(data_path)
+        self.data_path = data_path
         self.split = split
         self.samples: List[Dict[str, Any]] = []
         self._load_data()

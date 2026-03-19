@@ -5,9 +5,7 @@ Wraps 'BaseDataset' with text-specific defaults and validation.
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict, Union
-
+from typing import Any, Dict
 from mb.finetune.data.base import BaseDataset
 
 __all__ = ["TextDataset"]
@@ -20,7 +18,7 @@ class TextDataset(BaseDataset):
 
     def __init__(
         self,
-        data_path: Union[str, Path],
+        data_path: str,
         text_column: str = "text",
         target_column: str = "output",
         split: str = "train",
