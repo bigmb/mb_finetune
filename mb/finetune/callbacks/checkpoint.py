@@ -1,16 +1,14 @@
-"""Checkpoint management callback for finetuning."""
+"""
+Checkpoint management callback for finetuning. Using Transformer utils for checkpointing
+"""
 
 from __future__ import annotations
-
-import logging
+from mb.utils.logging import logg
 from pathlib import Path
 
 from transformers import TrainerCallback, TrainerControl, TrainerState, TrainingArguments
 
 __all__ = ["CheckpointCallback"]
-
-logger = logging.getLogger("mb.finetune")
-
 
 class CheckpointCallback(TrainerCallback):
     """
@@ -25,7 +23,7 @@ class CheckpointCallback(TrainerCallback):
         **kwargs,
     ):
         checkpoint_dir = Path(args.output_dir) / f"checkpoint-{state.global_step}"
-        logger.info(f"Checkpoint saved: {checkpoint_dir}")
+        logg.info(f"Checkpoint saved: {checkpoint_dir}", logger=self.logger)
 
     def on_train_end(self, args, state, control, **kwargs):
-        logger.info(f"Final model saved to: {args.output_dir}")
+        logg.info(f"Final model saved to: {args.output_dir}", logger=self.logger)

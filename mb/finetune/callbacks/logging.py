@@ -1,15 +1,13 @@
-"""Logging callback for finetuning."""
+"""
+Logging callback for finetuning. Using Transformer utils for logging structured training metrics.
+"""
 
 from __future__ import annotations
-
-import logging
 from typing import Any, Dict
-
+from mb.utils.logging import logg
 from transformers import TrainerCallback, TrainerControl, TrainerState, TrainingArguments
 
 __all__ = ["LoggingCallback"]
-
-logger = logging.getLogger("mb.finetune")
 
 
 class LoggingCallback(TrainerCallback):
@@ -34,14 +32,14 @@ class LoggingCallback(TrainerCallback):
             if key in logs:
                 parts.append(f"{key}={logs[key]:.6f}")
 
-        logger.info(" | ".join(parts))
+        logg.info(" | ".join(parts), logger=self.logger)
 
     def on_train_begin(self, args, state, control, **kwargs):
-        logger.info("=== Finetuning started ===")
-        logger.info(f"  Output dir: {args.output_dir}")
-        logger.info(f"  Epochs:     {args.num_train_epochs}")
-        logger.info(f"  Batch size: {args.per_device_train_batch_size}")
-        logger.info(f"  LR:         {args.learning_rate}")
+        logg.info("=== Finetuning started ===", logger=self.logger)
+        logg.info(f"  Output dir: {args.output_dir}", logger=self.logger)
+        logg.info(f"  Epochs:     {args.num_train_epochs}", logger=self.logger)
+        logg.info(f"  Batch size: {args.per_device_train_batch_size}", logger=self.logger)
+        logg.info(f"  LR:         {args.learning_rate}", logger=self.logger)
 
     def on_train_end(self, args, state, control, **kwargs):
-        logger.info(f"=== Finetuning complete — {state.global_step} steps ===")
+        logg.info(f"=== Finetuning complete — {state.global_step} steps ===", logger=self.logger)
