@@ -1,8 +1,8 @@
 # python -m mb.finetune.run --config config.yaml
 
 model:
-  model_name: qwen    # qwen | blip | clip
-  model_id: Qwen/Qwen2.5-VL-7B-Instruct    # HuggingFace model ID
+  model_name: clip    # qwen | blip | clip | gemma
+  model_id: openai/clip-vit-base-patch32    # HuggingFace model ID
   task_type: image_text_to_text
   load_in_4bit: true
   use_flash_attention: true
@@ -53,7 +53,7 @@ train:
   optim: adamw_torch
 
 output:
-  output_dir: ./output/qwen_vl_finetune
+  output_dir: ./output/clip_vl_finetune
   save_total_limit: 3
   push_to_hub: false
   logging_dir: ./logs
