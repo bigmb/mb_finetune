@@ -178,6 +178,15 @@ class CLIPAdapter(ModelBaseAdapter):
         text = self._to_text(sample.get(cfg.text_column, ""))
         target = self._to_text(sample.get(cfg.target_column, ""))
 
+        clip_text_limit = getattr(self._tokenizer, "model_max_length", cfg.max_length)
+        clip_cfg = getattr(getattr(self._model, "clip", None), "config", None)
+        if clip_cfg is not None:
+            text_cfg = getattr(clip_cfg, "text_config", None)
+            if text_cfg is not None and hasattr(text_cfg, "max_position_embeddings"):
+                clip_text_limit = min(clip_text_limit, int(text_cfg.max_position_embeddings))
+
+        text_max_length = min(cfg.max_length, int(clip_text_limit))
+
         if cfg.output_type == "text_description":
             description = self._to_text(sample.get(cfg.description_column, ""))
             full_target = f"{target}\n{description}" if description else target
@@ -211,7 +220,7 @@ class CLIPAdapter(ModelBaseAdapter):
         # Always tokenize the text
         text_inputs = self._tokenizer(
             text,
-            max_length=cfg.max_length,
+            max_length=text_max_length,
             padding="max_length",
             truncation=True,
             return_tensors="pt",
