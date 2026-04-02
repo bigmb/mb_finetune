@@ -144,6 +144,9 @@ class FinetuneConfig:
                 if isinstance(attr, (ModelConfig, DataConfig, TrainConfig, OutputConfig)):
                     for sub_key, sub_value in value.items():
                         if hasattr(attr, sub_key):
-                            setattr(attr, sub_key, sub_value)
+                            if isinstance(attr, ModelConfig) and sub_key == "lora" and isinstance(sub_value, dict):
+                                setattr(attr, sub_key, LoRAConfig(**sub_value))
+                            else:
+                                setattr(attr, sub_key, sub_value)
                 else:
                     setattr(self, key, value)
