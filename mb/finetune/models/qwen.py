@@ -22,14 +22,14 @@ from transformers import (
 )
 
 from mb.finetune.config import FinetuneConfig
-from mb.finetune.models.base import BaseModelAdapter
+from mb.finetune.models.base import ModelBaseAdapter
 from mb.finetune.models.registry import ModelRegistry
 
 __all__ = ["QwenAdapter"]
 
 
 @ModelRegistry.register("qwen")
-class QwenAdapter(BaseModelAdapter):
+class QwenAdapter(ModelBaseAdapter):
     """Adapter for the Qwen / Qwen-VL family."""
 
     # Default model IDs if the user does not specify one.

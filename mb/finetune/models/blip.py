@@ -20,16 +20,15 @@ from transformers import (
     PreTrainedModel,
     PreTrainedTokenizerBase,
 )
-
 from mb.finetune.config import FinetuneConfig
-from mb.finetune.models.base import BaseModelAdapter
+from mb.finetune.models.base import ModelBaseAdapter
 from mb.finetune.models.registry import ModelRegistry
 
 __all__ = ["BlipAdapter"]
 
 
 @ModelRegistry.register("blip")
-class BlipAdapter(BaseModelAdapter):
+class BlipAdapter(ModelBaseAdapter):
     """Adapter for BLIP-2 image-captioning / VQA models."""
 
     _DEFAULT_MODEL = "Salesforce/blip2-opt-2.7b"
