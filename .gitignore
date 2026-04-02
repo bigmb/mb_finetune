@@ -6,7 +6,7 @@ examples/log1/
 example/log/
 example/log1/
 examples/*.json
-
+examples/output/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

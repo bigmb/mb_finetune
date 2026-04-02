@@ -15,6 +15,7 @@ Recommended model IDs:
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import torch
@@ -189,14 +190,23 @@ class CLIPAdapter(ModelBaseAdapter):
             from PIL import Image
 
             image = sample.get(cfg.image_column)
-            if isinstance(image, str):
-                image = Image.open(image).convert("RGB")
+            if isinstance(image, float) and image != image:
+                image = None
 
-            img_inputs = self._processor(
-                images=image,
-                return_tensors="pt",
-            )
-            result["pixel_values"] = img_inputs["pixel_values"].squeeze(0)
+            if isinstance(image, str):
+                image = image.strip()
+                if image:
+                    image_path = Path(image)
+                    image = Image.open(image_path).convert("RGB") if image_path.exists() else None
+                else:
+                    image = None
+
+            if image is not None:
+                img_inputs = self._processor(
+                    images=image,
+                    return_tensors="pt",
+                )
+                result["pixel_values"] = img_inputs["pixel_values"].squeeze(0)
 
         # Always tokenize the text
         text_inputs = self._tokenizer(
