@@ -21,9 +21,9 @@ model:
 data:
   input_type: multimodal        # text | multimodal
   output_type: clip_output_label     # text | text_description
-  train_path: ./data/train.parquet
-  val_path: ./data/val.parquet
-  image_dir: ./data/sample_data
+  train_path: /home/winnow/mb_packages/mb_finetune/data/train.parquet
+  val_path: /home/winnow/mb_packages/mb_finetune/data/val.parquet
+  image_dir: /home/winnow/mb_packages/mb_finetune/data/sample_data
   text_column: query
   image_column: newfood_local_file_titan
   target_column: main_tags

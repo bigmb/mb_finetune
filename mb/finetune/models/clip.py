@@ -53,6 +53,16 @@ class CLIPWithTextHead(nn.Module):
         self.token_embed = nn.Embedding(vocab_size, hidden_dim)
         self.output_proj = nn.Linear(hidden_dim, vocab_size)
 
+    def gradient_checkpointing_enable(self, **kwargs):
+        if hasattr(self.clip, "gradient_checkpointing_enable"):
+            return self.clip.gradient_checkpointing_enable(**kwargs)
+        return None
+
+    def gradient_checkpointing_disable(self):
+        if hasattr(self.clip, "gradient_checkpointing_disable"):
+            return self.clip.gradient_checkpointing_disable()
+        return None
+
     def forward(
         self,
         pixel_values=None,
