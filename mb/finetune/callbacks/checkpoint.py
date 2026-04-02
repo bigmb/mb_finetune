@@ -14,6 +14,8 @@ class CheckpointCallback(TrainerCallback):
     """
     Callback that logs checkpoint saves and can do custom cleanup.
     """
+    def __init__(self, logger=None):
+        self.logger = logger
 
     def on_save(
         self,

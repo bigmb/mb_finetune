@@ -12,6 +12,8 @@ __all__ = ["LoggingCallback"]
 
 class LoggingCallback(TrainerCallback):
     """Custom logging callback that writes structured training metrics."""
+    def __init__(self, logger=None):
+        self.logger = logger
 
     def on_log(
         self,
