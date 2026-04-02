@@ -64,6 +64,19 @@ class CLIPWithTextHead(nn.Module):
             return self.clip.gradient_checkpointing_disable()
         return None
 
+    @staticmethod
+    def _extract_tensor(embeds):
+        if torch.is_tensor(embeds):
+            return embeds
+
+        if hasattr(embeds, "pooler_output") and embeds.pooler_output is not None:
+            return embeds.pooler_output
+
+        if hasattr(embeds, "last_hidden_state") and embeds.last_hidden_state is not None:
+            return embeds.last_hidden_state[:, 0]
+
+        raise TypeError(f"Unsupported embedding output type: {type(embeds)!r}")
+
     def forward(
         self,
         pixel_values=None,
@@ -75,9 +88,11 @@ class CLIPWithTextHead(nn.Module):
         # Encode image if present
         if pixel_values is not None:
             image_embeds = self.clip.get_image_features(pixel_values=pixel_values)
+            image_embeds = self._extract_tensor(image_embeds)
             memory = self.embed_proj(image_embeds).unsqueeze(1)  # (B, 1, H)
         else:
             text_embeds = self.clip.get_text_features(input_ids=input_ids, attention_mask=attention_mask)
+            text_embeds = self._extract_tensor(text_embeds)
             memory = self.embed_proj(text_embeds).unsqueeze(1)
 
         if labels is not None:
