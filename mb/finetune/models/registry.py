@@ -77,7 +77,7 @@ class ModelRegistry:
         from mb.finetune.models import qwen as _
         from mb.finetune.models import blip as _
         from mb.finetune.models import clip as _
-        from mb.finetune.models import gemini as _
+        from mb.finetune.models import gemma as _
  
 
 # Auto-register built-in adapters on import.

@@ -22,7 +22,7 @@ from mb.finetune.data.collator import SmartCollator
 from mb.finetune.data.multimodal_dataset import MultimodalDataset
 from mb.finetune.data.text_dataset import TextDataset
 from mb.finetune.models.registry import ModelRegistry
-from mb.finetune.models.base import BaseModelAdapter
+from mb.finetune.models.base import ModelBaseAdapter
 from mb.finetune.callbacks.logging import LoggingCallback
 from mb.finetune.callbacks.checkpoint import CheckpointCallback
 from mb.utils.logging import logg
@@ -40,7 +40,7 @@ class FinetuneTrainer:
 
     def __init__(self, config: FinetuneConfig, logger=None) -> None:
         self.config = config
-        self.adapter: Optional[BaseModelAdapter] = None
+        self.adapter: Optional[ModelBaseAdapter] = None
         self.hf_trainer: Optional[Trainer] = None
         self.logger = logger 
 
@@ -112,7 +112,7 @@ class FinetuneTrainer:
             raise RuntimeError("Trainer not initialised – call train() first.")
         return self.hf_trainer.evaluate()
 
-    def _load_adapter(self) -> BaseModelAdapter:
+    def _load_adapter(self) -> ModelBaseAdapter:
         """
         Instantiate the correct model adapter from the registry.
         """
