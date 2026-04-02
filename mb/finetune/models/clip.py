@@ -14,6 +14,7 @@ Recommended model IDs:
 
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, Tuple
 
 import torch
@@ -27,7 +28,7 @@ from transformers import (
 )
 
 from mb.finetune.config import FinetuneConfig
-from mb.finetune.models.base import BaseModelAdapter
+from mb.finetune.models.base import ModelBaseAdapter
 from mb.finetune.models.registry import ModelRegistry
 
 __all__ = ["CLIPAdapter"]
@@ -81,7 +82,7 @@ class CLIPWithTextHead(nn.Module):
 
 
 @ModelRegistry.register("clip")
-class CLIPAdapter(BaseModelAdapter):
+class CLIPAdapter(ModelBaseAdapter):
     """Adapter for OpenAI CLIP models + optional text generation head."""
 
     _DEFAULT_MODEL = "openai/clip-vit-base-patch32"
@@ -131,13 +132,43 @@ class CLIPAdapter(BaseModelAdapter):
 
         return model
 
+    @staticmethod
+    def _to_text(value: Any) -> str:
+        if value is None:
+            return ""
+
+        if isinstance(value, float) and value != value:
+            return ""
+
+        if isinstance(value, list):
+            return ", ".join(str(item) for item in value)
+
+        if isinstance(value, dict):
+            return json.dumps(value, ensure_ascii=False)
+
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return ""
+
+            if stripped.startswith("[") or stripped.startswith("{"):
+                try:
+                    parsed = json.loads(stripped)
+                    return CLIPAdapter._to_text(parsed)
+                except (json.JSONDecodeError, TypeError):
+                    return stripped
+
+            return stripped
+
+        return str(value)
+
     def format_input(self, sample: Dict[str, Any]) -> Dict[str, Any]:
         cfg = self.config.data
-        text = sample.get(cfg.text_column, "")
-        target = sample.get(cfg.target_column, "")
+        text = self._to_text(sample.get(cfg.text_column, ""))
+        target = self._to_text(sample.get(cfg.target_column, ""))
 
         if cfg.output_type == "text_description":
-            description = sample.get(cfg.description_column, "")
+            description = self._to_text(sample.get(cfg.description_column, ""))
             full_target = f"{target}\n{description}" if description else target
         else:
             full_target = target

@@ -59,17 +59,21 @@ class FinetuneTrainer:
         model = self.adapter.prepare_for_training()
 
         # 3. Build datasets
+        logg.info("Building datasets", logger=self.logger)
         train_dataset = self._build_dataset("train")
         eval_dataset = self._build_dataset("eval") if self.config.data.val_path else None
 
         # 4. Data collator
+        logg.info("Setting up data collator", logger=self.logger)
         pad_id = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else 0
         collator = SmartCollator(pad_token_id=pad_id)
 
         # 5. Training arguments
+        logg.info("Setting up training arguments", logger=self.logger)
         training_args = self._build_training_args()
 
         # 6. Build HF Trainer
+        logg.info("Initialising HuggingFace Trainer", logger=self.logger)
         self.hf_trainer = Trainer(
             model=model,
             args=training_args,
@@ -79,7 +83,7 @@ class FinetuneTrainer:
             callbacks=[LoggingCallback(), CheckpointCallback()],
         )
 
-        # 7. Train!
+        # 7. Training loop
         logg.info("Starting training", logger=self.logger)
         resume = self.config.output.resume_from_checkpoint
         self.hf_trainer.train(resume_from_checkpoint=resume)
@@ -149,7 +153,7 @@ class FinetuneTrainer:
 
     def _build_training_args(self) -> TrainingArguments:
         """
-        Map ``TrainConfig`` + ``OutputConfig`` → HuggingFace ``TrainingArguments``.
+        Map 'TrainConfig' + 'OutputConfig' -> HuggingFace 'TrainingArguments'.
         """
         t = self.config.train
         o = self.config.output

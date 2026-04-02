@@ -35,7 +35,7 @@ class ModelConfig:
     load_in_4bit: bool = False
     load_in_8bit: bool = False
     use_flash_attention: bool = True
-    torch_dtype: str = "bfloat16"                   # float16 | bfloat16 | float32
+    torch_dtype: str = "float32"                   # float16 | bfloat16 | float32
     device_map: str = "auto"
     trust_remote_code: bool = True
     lora: Optional[LoRAConfig] = None
@@ -90,7 +90,7 @@ class TrainConfig:
     lr_scheduler_type: str = "cosine"
     max_grad_norm: float = 1.0
     fp16: bool = False
-    bf16: bool = True
+    bf16: bool = False
     gradient_checkpointing: bool = True
     save_steps: int = 500
     eval_steps: int = 500
@@ -117,7 +117,9 @@ class OutputConfig:
 
 @dataclass
 class FinetuneConfig:
-    """Top-level configuration that bundles all sub-configs."""
+    """
+    Top-level configuration that bundles all sub-configs.
+    """
 
     model: ModelConfig = field(default_factory=ModelConfig)
     data: DataConfig = field(default_factory=DataConfig)
