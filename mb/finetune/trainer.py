@@ -80,7 +80,7 @@ class FinetuneTrainer:
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             data_collator=collator,
-            callbacks=[LoggingCallback(), CheckpointCallback()],
+            callbacks=[LoggingCallback(train_dataset=train_dataset), CheckpointCallback()],
         )
 
         # 7. Training loop

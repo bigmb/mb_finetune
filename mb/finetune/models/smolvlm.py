@@ -134,7 +134,7 @@ class SmolVLMAdapter(ModelBaseAdapter):
             messages,
             tokenize=True,
             return_dict=True,
-            return_tensors="pt",
+            processor_kwargs={"return_tensors": "pt"},
         )
         inputs = {k: v.squeeze(0) for k, v in inputs.items()}
 
