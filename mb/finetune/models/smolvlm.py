@@ -110,28 +110,8 @@ class SmolVLMAdapter(ModelBaseAdapter):
 
         # Build message content list
         content = []
-
-        if cfg.input_type == "multimodal":
-            image_val = sample.get(cfg.image_column)
-            if isinstance(image_val, str) and image_val.strip():
-                image_path = Path(image_val.strip())
-                if image_path.exists():
-                    content.append({"type": "image", "path": str(image_path)})
-
-        content.append({"type": "text", "text": prompt_text})
-
-        messages = [{"role": "user", "content": content}]
-
-        # Use chat template to produce input_ids + pixel_values etc.
-        proc_text = self._processor.apply_chat_template(
-            messages,
-            add_generation_prompt=True,
-            tokenize=False,
-        )
-        full_text = proc_text + full_target
-
-        # Load image for processor if multimodal
         images = None
+
         if cfg.input_type == "multimodal":
             image_val = sample.get(cfg.image_column)
             if isinstance(image_val, str) and image_val.strip():
@@ -139,19 +119,47 @@ class SmolVLMAdapter(ModelBaseAdapter):
                 if image_path.exists():
                     from PIL import Image
 
+                    content.append({"type": "image", "path": str(image_path)})
                     images = [Image.open(image_path).convert("RGB")]
 
-        inputs = self._processor(
-            text=full_text,
-            images=images,
+        content.append({"type": "text", "text": prompt_text})
+
+        messages = [
+            {"role": "user", "content": content},
+            {"role": "assistant", "content": [{"type": "text", "text": full_target}]},
+        ]
+
+        # Use apply_chat_template with tokenize=True so image token
+        # expansion and tokenization happen in one pass (avoids the
+        # mismatch between text-level image placeholders and token-level
+        # image tokens that truncation would cause).
+        inputs = self._processor.apply_chat_template(
+            messages,
+            tokenize=True,
+            return_dict=True,
             return_tensors="pt",
-            padding="max_length",
-            max_length=cfg.max_length,
-            truncation=True,
+            processor_kwargs={"images": images} if images else {},
         )
         inputs = {k: v.squeeze(0) for k, v in inputs.items()}
 
-        # Build labels: mask everything before the target
+        # Truncate or pad to max_length after image tokens are resolved
+        max_len = cfg.max_length
+        seq_len = inputs["input_ids"].shape[0]
+
+        if seq_len > max_len:
+            for k in inputs:
+                if isinstance(inputs[k], torch.Tensor) and inputs[k].dim() >= 1 and inputs[k].shape[0] == seq_len:
+                    inputs[k] = inputs[k][:max_len]
+        elif seq_len < max_len:
+            pad_len = max_len - seq_len
+            pad_id = self._tokenizer.pad_token_id or 0
+            for k in inputs:
+                if isinstance(inputs[k], torch.Tensor) and inputs[k].dim() >= 1 and inputs[k].shape[0] == seq_len:
+                    pad_val = -100 if k == "labels" else pad_id if "ids" in k else 0
+                    padding = torch.full((pad_len,), pad_val, dtype=inputs[k].dtype)
+                    inputs[k] = torch.cat([inputs[k], padding])
+
+        # Build labels: mask pad tokens
         labels = inputs["input_ids"].clone()
         labels[labels == self._tokenizer.pad_token_id] = -100
         inputs["labels"] = labels

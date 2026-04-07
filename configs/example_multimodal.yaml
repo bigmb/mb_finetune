@@ -5,7 +5,7 @@ model:
   model_id: HuggingFaceTB/SmolVLM2-256M-Video-Instruct    # HuggingFace model ID
   task_type: image_text_to_text
   load_in_4bit: false
-  use_flash_attention: true
+  use_flash_attention: false
   torch_dtype: bfloat16
   device_map: auto
   trust_remote_code: true
@@ -28,7 +28,7 @@ data:
   image_column: new_local_path_pc
   target_column: response
   description_column: response
-  max_length: 2048
+  max_length: 4096
   image_size: 256
   prompt_template: "{text}"
 
