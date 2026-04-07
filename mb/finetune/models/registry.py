@@ -78,6 +78,7 @@ class ModelRegistry:
         from mb.finetune.models import blip as _
         from mb.finetune.models import clip as _
         from mb.finetune.models import gemma as _
+        from mb.finetune.models import smolvlm as _
  
 
 # Auto-register built-in adapters on import.

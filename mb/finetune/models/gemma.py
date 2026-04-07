@@ -83,7 +83,13 @@ class GemmaAdapter(ModelBaseAdapter):
         else:
             full_target = target
 
-        prompt = cfg.prompt_template.format(text=text) if cfg.prompt_template else text
+        if cfg.prompt_template:
+            # Allow any column name in the template (e.g. {query}, {input_data})
+            template_vars = {k: str(v) if v is not None else "" for k, v in sample.items()}
+            template_vars["text"] = text
+            prompt = cfg.prompt_template.format_map(template_vars)
+        else:
+            prompt = text
         full_text = f"{prompt}\n{full_target}" if full_target else prompt
 
         encodings = self._tokenizer(

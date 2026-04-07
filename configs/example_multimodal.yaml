@@ -1,12 +1,12 @@
 # python -m mb.finetune.run --config config.yaml
 
 model:
-  model_name: clip    # qwen | blip | clip | gemma
-  model_id: openai/clip-vit-base-patch32    # HuggingFace model ID
+  model_name: smolvlm    # qwen | blip | clip | gemma | smolvlm
+  model_id: HuggingFaceTB/SmolVLM2-256M-Video-Instruct    # HuggingFace model ID
   task_type: image_text_to_text
-  load_in_4bit: true
+  load_in_4bit: false
   use_flash_attention: true
-  torch_dtype: float16
+  torch_dtype: bfloat16
   device_map: auto
   trust_remote_code: true
   lora:
@@ -20,17 +20,17 @@ model:
 
 data:
   input_type: multimodal        # text | multimodal
-  output_type: clip_output_label     # text | text_description
-  train_path: /home/malav/Desktop/mb_packages/mb_finetune/data/train.parquet
-  val_path: /home/malav/Desktop/mb_packages/mb_finetune/data/val.parquet
-  image_dir: /home/malav/Desktop/mb_packages/mb_finetune/data/sample_data
+  output_type: text     # text | text_description
+  train_path: /home/malav/Desktop/mb_packages/mb_finetune/data/train_data2.csv
+  val_path: 
+  image_dir: 
   text_column: query
-  image_column: newfood_local_file_titan
-  target_column: main_tags
+  image_column: new_local_path_pc
+  target_column: response
   description_column: response
-  max_length: 512
+  max_length: 2048
   image_size: 256
-  prompt_template: "Answer the following question about the image: {text}"
+  prompt_template: "{text}"
 
 train:
   num_epochs: 3
@@ -53,7 +53,7 @@ train:
   optim: adamw_torch
 
 output:
-  output_dir: ./output/clip_vl_finetune
+  output_dir: ./output/smolvlm2_finetune
   save_total_limit: 3
   push_to_hub: false
   logging_dir: ./logs

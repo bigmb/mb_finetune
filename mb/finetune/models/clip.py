@@ -82,6 +82,7 @@ class CLIPWithTextHead(nn.Module):
         pixel_values=None,
         input_ids=None,
         attention_mask=None,
+        decoder_input_ids=None,
         labels=None,
         **kwargs,
     ):
@@ -96,7 +97,10 @@ class CLIPWithTextHead(nn.Module):
             memory = self.embed_proj(text_embeds).unsqueeze(1)
 
         if labels is not None:
-            tgt = self.token_embed(labels)
+            if decoder_input_ids is None:
+                decoder_input_ids = labels.masked_fill(labels == -100, 0)
+
+            tgt = self.token_embed(decoder_input_ids)
             decoded = self.decoder(tgt, memory)
             logits = self.output_proj(decoded)
 
@@ -251,6 +255,11 @@ class CLIPAdapter(ModelBaseAdapter):
             truncation=True,
             return_tensors="pt",
         )
-        result["labels"] = label_inputs["input_ids"].squeeze(0)
+        decoder_input_ids = label_inputs["input_ids"].squeeze(0)
+        labels = decoder_input_ids.clone()
+        labels[labels == self._tokenizer.pad_token_id] = -100
+
+        result["decoder_input_ids"] = decoder_input_ids
+        result["labels"] = labels
 
         return result
