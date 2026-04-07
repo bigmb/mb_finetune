@@ -9,7 +9,7 @@ any supported model in a uniform way.
 from __future__ import annotations
 
 import abc
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Set, Tuple
 import torch
 from transformers import PreTrainedModel, PreTrainedTokenizerBase, ProcessorMixin
 
@@ -126,7 +126,35 @@ class ModelBaseAdapter(abc.ABC):
         """
         Save model + tokenizer to disk.
         """
-        self.model.save_pretrained(output_dir)
+        state_dict = self._build_serializable_state_dict()
+        self.model.save_pretrained(output_dir, state_dict=state_dict)
         self.tokenizer.save_pretrained(output_dir)
         if self._processor is not None:
             self._processor.save_pretrained(output_dir)
+
+    def _build_serializable_state_dict(self) -> Dict[str, torch.Tensor]:
+        """
+        Build a state dict compatible with safetensors serialization.
+        """
+        raw_state_dict = self.model.state_dict()
+        serializable: Dict[str, torch.Tensor] = {}
+        seen_storage_ptrs: Set[int] = set()
+
+        for name, value in raw_state_dict.items():
+            if not isinstance(value, torch.Tensor):
+                serializable[name] = value
+                continue
+
+            tensor = value
+            if not tensor.is_contiguous():
+                tensor = tensor.contiguous()
+
+            storage_ptr = tensor.untyped_storage().data_ptr()
+            if storage_ptr in seen_storage_ptrs:
+                tensor = tensor.clone().contiguous()
+                storage_ptr = tensor.untyped_storage().data_ptr()
+
+            seen_storage_ptrs.add(storage_ptr)
+            serializable[name] = tensor
+
+        return serializable
