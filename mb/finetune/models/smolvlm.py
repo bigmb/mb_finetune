@@ -110,17 +110,13 @@ class SmolVLMAdapter(ModelBaseAdapter):
 
         # Build message content list
         content = []
-        images = None
 
         if cfg.input_type == "multimodal":
             image_val = sample.get(cfg.image_column)
             if isinstance(image_val, str) and image_val.strip():
                 image_path = Path(image_val.strip())
                 if image_path.exists():
-                    from PIL import Image
-
                     content.append({"type": "image", "path": str(image_path)})
-                    images = [Image.open(image_path).convert("RGB")]
 
         content.append({"type": "text", "text": prompt_text})
 
@@ -133,12 +129,12 @@ class SmolVLMAdapter(ModelBaseAdapter):
         # expansion and tokenization happen in one pass (avoids the
         # mismatch between text-level image placeholders and token-level
         # image tokens that truncation would cause).
+        # Images are loaded automatically from the "path" key in messages.
         inputs = self._processor.apply_chat_template(
             messages,
             tokenize=True,
             return_dict=True,
             return_tensors="pt",
-            processor_kwargs={"images": images} if images else {},
         )
         inputs = {k: v.squeeze(0) for k, v in inputs.items()}
 
