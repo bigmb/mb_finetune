@@ -65,72 +65,103 @@ class LoggingCallback(TrainerCallback):
 
     @staticmethod
     def _log_model_graph_to_tb(args, model, train_dataset):
-        """Log model computation graph to TensorBoard."""
+        """Log model architecture summary to TensorBoard.
+
+        torch.jit.trace (used by add_graph) reliably fails on modern HuggingFace
+        transformer models due to dynamic control flow, ModelOutput return types,
+        and PEFT/quantisation wrappers.  We log the architecture as structured text
+        instead, which always works and is just as useful for auditing the model.
+        """
         try:
-            import torch
             from torch.utils.tensorboard import SummaryWriter
 
-            if train_dataset is None or len(train_dataset) == 0:
-                return
+            total_params = sum(p.numel() for p in model.parameters())
+            trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-            # Get a single sample from the dataset
-            sample = train_dataset[0]
-            if not isinstance(sample, dict):
-                return
-
-            # Build a dummy batch on the model's device
-            device = next(model.parameters()).device
-            dummy_inputs = {}
-            for k, v in sample.items():
-                if isinstance(v, torch.Tensor):
-                    dummy_inputs[k] = v.unsqueeze(0).to(device)
-
-            if "input_ids" not in dummy_inputs:
-                return
+            summary_lines = [
+                f"**Model type:** `{type(model).__name__}`",
+                f"**Total parameters:** {total_params:,}",
+                f"**Trainable parameters:** {trainable_params:,}",
+                f"**Frozen parameters:** {total_params - trainable_params:,}",
+                "",
+                "**Layer breakdown:**",
+                "```",
+            ]
+            for name, module in model.named_modules():
+                if name == "":
+                    continue
+                depth = name.count(".")
+                if depth > 2:
+                    continue
+                num_params = sum(p.numel() for p in module.parameters(recurse=False))
+                indent = "  " * depth
+                summary_lines.append(
+                    f"{indent}{name}: {type(module).__name__}"
+                    + (f"  [{num_params:,} params]" if num_params else "")
+                )
+            summary_lines.append("```")
 
             writer = SummaryWriter(log_dir=args.logging_dir)
+            try:
+                writer.add_text("model/architecture", "  \n".join(summary_lines), global_step=0)
+            finally:
+                writer.close()
 
-            # Trace the model with torch.no_grad to avoid grad issues
-            model.eval()
-            with torch.no_grad():
-                writer.add_graph(model, input_to_model=dummy_inputs, use_strict_trace=False)
-
-            writer.close()
-            model.train()
-            logg.info("Model graph logged to TensorBoard")
+            logg.info(
+                f"Model architecture logged to TensorBoard "
+                f"({trainable_params:,} / {total_params:,} params trainable)"
+            )
         except Exception as e:
-            logg.warning(f"Could not log model graph to TensorBoard: {e}")
+            logg.warning(f"Could not log model architecture to TensorBoard: {e}")
 
     @staticmethod
     def _log_data_samples_to_tb(args, train_dataset):
-        """Log a few dataset samples as text to TensorBoard."""
+        """Log a few dataset samples as text and images to TensorBoard."""
         if train_dataset is None:
             return
         try:
+            import numpy as np
+            from PIL import Image
             from torch.utils.tensorboard import SummaryWriter
 
-            writer = SummaryWriter(log_dir=args.logging_dir)
             num_samples = min(10, len(train_dataset))
+            image_column = getattr(train_dataset, "image_column", None)
 
-            writer.add_text(
-                "data/info",
-                f"**Dataset size:** {len(train_dataset)} samples  \n"
-                f"**Showing first {num_samples} raw samples**",
-                global_step=0,
-            )
+            writer = SummaryWriter(log_dir=args.logging_dir)
+            try:
+                writer.add_text(
+                    "data/info",
+                    f"**Dataset size:** {len(train_dataset)} samples  \n"
+                    f"**Showing first {num_samples} raw samples**",
+                    global_step=0,
+                )
 
-            for i in range(num_samples):
-                sample = train_dataset.samples[i] if hasattr(train_dataset, "samples") else {}
-                if not sample:
-                    continue
-                lines = [f"**Sample {i}**\n"]
-                for k, v in sample.items():
-                    v_str = str(v)
-                    if len(v_str) > 500:
-                        v_str = v_str[:500] + "…"
-                    lines.append(f"- **{k}**: {v_str}")
-                writer.add_text(f"data/sample_{i}", "  \n".join(lines), global_step=0)
+                for i in range(num_samples):
+                    sample = train_dataset.samples[i] if hasattr(train_dataset, "samples") else {}
+                    if not sample:
+                        continue
 
-            writer.close()
+                    if hasattr(train_dataset, "_resolve_image"):
+                        sample = train_dataset._resolve_image(sample)
+
+                    lines = [f"**Sample {i}**\n"]
+                    for k, v in sample.items():
+                        v_str = str(v)
+                        if len(v_str) > 500:
+                            v_str = v_str[:500] + "…"
+                        lines.append(f"- **{k}**: {v_str}")
+                    writer.add_text(f"data/sample_{i}", "  \n".join(lines), global_step=0)
+
+                    if image_column and image_column in sample:
+                        img_path = sample[image_column]
+                        try:
+                            img = Image.open(img_path).convert("RGB")
+                            img_array = np.array(img)
+                            img_chw = img_array.transpose(2, 0, 1).astype(np.float32) / 255.0
+                            writer.add_image(f"data/sample_{i}", img_chw, global_step=0)
+                        except Exception as img_err:
+                            logg.warning(f"Could not log image for sample {i}: {img_err}")
+            finally:
+                writer.close()
         except Exception as e:
             logg.warning(f"Could not log data samples to TensorBoard: {e}")

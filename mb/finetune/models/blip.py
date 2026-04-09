@@ -97,7 +97,10 @@ class BlipAdapter(ModelBaseAdapter):
 
         image = sample.get(cfg.image_column)
         if isinstance(image, str):
-            image = Image.open(image).convert("RGB")
+            try:
+                image = Image.open(image).convert("RGB")
+            except (FileNotFoundError, OSError) as e:
+                raise FileNotFoundError(f"Could not open image '{image}': {e}") from e
 
         inputs = self._processor(
             images=image,

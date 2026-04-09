@@ -7,7 +7,7 @@ Usage:
 import argparse
 from mb.finetune.config import FinetuneConfig
 from mb.finetune.trainer import FinetuneTrainer
-from mb.utils.logging import logg
+from mb.utils.logging import logg, logger as mb_logger
 
 def main():
     parser = argparse.ArgumentParser(
@@ -29,16 +29,11 @@ def main():
     config = FinetuneConfig.from_yaml(args.config)
 
     trainer = FinetuneTrainer(config)
+    logger = trainer.logger or mb_logger
 
     if args.eval_only:
-        # For eval-only, we still need to go through load sequence
         trainer.train()  # will resume from checkpoint
         metrics = trainer.evaluate()
-        if trainer.logger is not None:
-            from mb.utils.logging import logger
-            logger = logger
-        else:
-            logger = None
         logg.info(f"Evaluation metrics: {metrics}", logger=logger)
     else:
         trainer.train()

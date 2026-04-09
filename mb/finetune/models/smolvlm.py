@@ -25,6 +25,7 @@ from transformers import (
 from mb.finetune.config import FinetuneConfig
 from mb.finetune.models.base import ModelBaseAdapter
 from mb.finetune.models.registry import ModelRegistry
+from mb.utils.logging import logg
 
 __all__ = ["SmolVLMAdapter"]
 
@@ -117,6 +118,8 @@ class SmolVLMAdapter(ModelBaseAdapter):
                 image_path = Path(image_val.strip())
                 if image_path.exists():
                     content.append({"type": "image", "path": str(image_path)})
+                else:
+                    logg.warning(f"Image not found, training sample without image: {image_path}", logger=self.config.logger)
 
         content.append({"type": "text", "text": prompt_text})
 
@@ -155,9 +158,14 @@ class SmolVLMAdapter(ModelBaseAdapter):
                     padding = torch.full((pad_len,), pad_val, dtype=inputs[k].dtype)
                     inputs[k] = torch.cat([inputs[k], padding])
 
-        # Build labels: mask pad tokens
+        # Build labels: mask padding positions using attention_mask so we don't
+        # accidentally mask the EOS token (pad_token_id == eos_token_id after
+        # the fallback assignment in load_model).
         labels = inputs["input_ids"].clone()
-        labels[labels == self._tokenizer.pad_token_id] = -100
+        if "attention_mask" in inputs:
+            labels[inputs["attention_mask"] == 0] = -100
+        else:
+            labels[labels == self._tokenizer.pad_token_id] = -100
         inputs["labels"] = labels
 
         return inputs

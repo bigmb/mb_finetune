@@ -28,7 +28,11 @@ class SmartCollator:
             return {}
 
         batch: Dict[str, Any] = {}
-        keys = features[0].keys()
+        # Intersect keys across all samples so a field absent from any one
+        # sample (e.g. pixel_values on a text-only row) doesn't cause a KeyError.
+        keys = set(features[0].keys())
+        for f in features[1:]:
+            keys &= set(f.keys())
 
         for key in keys:
             values = [f[key] for f in features]

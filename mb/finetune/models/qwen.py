@@ -123,7 +123,10 @@ class QwenAdapter(ModelBaseAdapter):
 
             image = sample.get(cfg.image_column)
             if isinstance(image, str):
-                image = Image.open(image).convert("RGB")
+                try:
+                    image = Image.open(image).convert("RGB")
+                except (FileNotFoundError, OSError) as e:
+                    raise FileNotFoundError(f"Could not open image '{image}': {e}") from e
 
             messages = [
                 {
@@ -133,15 +136,24 @@ class QwenAdapter(ModelBaseAdapter):
                         {"type": "text", "text": prompt},
                     ],
                 },
+                {
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": full_target}],
+                },
             ]
-            proc_text = self._processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-            inputs = self._processor(
-                text=proc_text + full_target,
-                images=image,
-                return_tensors="pt",
-                padding="max_length",
-                max_length=cfg.max_length,
-                truncation=True,
+            # tokenize=True processes text + image in one pass — avoids the
+            # double image-token expansion that happens when apply_chat_template
+            # (tokenize=False) is combined with a second processor() call.
+            inputs = self._processor.apply_chat_template(
+                messages,
+                tokenize=True,
+                return_dict=True,
+                processor_kwargs={
+                    "return_tensors": "pt",
+                    "padding": "max_length",
+                    "max_length": cfg.max_length,
+                    "truncation": True,
+                },
             )
             inputs = {k: v.squeeze(0) for k, v in inputs.items()}
             inputs["labels"] = inputs["input_ids"].clone()
